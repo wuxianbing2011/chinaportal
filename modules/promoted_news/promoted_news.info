@@ -1,0 +1,5 @@
+core          = "7.x"
+description   = "This module is promoted news on Front page"
+name          = "promoted_news"
+package       = chinaportal
+version 	  = "7.x-dev"

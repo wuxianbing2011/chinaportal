@@ -1,0 +1,7 @@
+core          = "7.x"
+description   = "This module is for intel shop product data cleansing."
+name          = "Data Cleansing"
+package       = _intel_shop
+version 	  = "7.x-dev"
+
+dependencies[] = xautoload

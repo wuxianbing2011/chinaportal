@@ -1,0 +1,764 @@
+<?php
+
+use Drupal\shop_spider\ProductFeed;
+use Drupal\shop_spider\ProductFeedStorage;
+use Drupal\shop_spider\DataSpiderFactory;
+
+/**
+ * Implementation of hook_permission()
+ * 
+ * @return multitype:string
+ */
+function shop_spider_permission(){
+	return array(
+	    'administer shop spider' => array(
+	    	'title' => t('Administer shop spider'),
+	    	'description' => t('Perform administration tasks for shop spider.'),
+	    ),
+		'perform shop spider' => array(
+			'title' => t('Perform shop spider'),
+			'description' => t('Perform tasks for shop spider.'),
+		),
+	);
+}
+
+/**
+ * Implementation of hook_menu()
+ * 
+ * @return multitype:multitype:string multitype:string
+ */
+function shop_spider_menu(){
+	$items = array();
+	//admin form 
+	$items['shop_spider'] = array(
+			'title' => t('Intel Product Direct Import'),
+			'description' => t('Product list input form for data retreve from PConline.'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('shop_spider_form'),
+			'access arguments' => array('perform shop spider'),
+			'type' => MENU_NORMAL_ITEM,
+			//'file' => 'shop_spider.admin.inc',
+	);
+	//Step loader call
+	$items['shop_spider/%'] = array(
+			'title' => t('Step Loader Call'),
+			'page callback' => '_spider_loader',
+			'page arguments' => array(1),
+			'access arguments' => array('perform shop spider'),
+			'type' => MENU_CALLBACK,
+			//'file' => 'shop_spider.inc',
+		//'theme callback' => '',
+	);
+	
+	$items['shop_spider_product_import'] = array(
+			'title' => t('Intel Product Import (Cron Job)'),
+			'description' => t('Product import to pending feeds for cron job.'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('shop_spider_product_import_form'),
+			'access arguments' => array('perform shop spider'),
+			'type' => MENU_NORMAL_ITEM,
+			//'file' => 'data_cleansing.inc',
+	);
+	
+	$items['shop_spider_testing_form'] = array(
+			'title' => t('Testing'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('shop_spider_testing_form'),
+			'access arguments' => array('administer shop spider'),
+			'type' => MENU_CALLBACK,
+			'file' => 'test/shop_spider.test.inc',
+			//'theme callback' => '',
+	);
+	
+	return $items;
+}
+
+
+/**
+ * Implements hook_cron()
+ * 
+ * Implements cron job for PConline product load. 
+ * 	- Cache pending product ids into DB table. 
+ * 	- Setup cron job to check this table for product which not load yet.
+ * 	- Seperate into cron queue to execute. 
+ * 
+ */
+function shop_spider_cron(){
+
+	if(db_table_exists('intel_product_feed')){
+		module_load_include('inc','shop_spider');
+		
+		$prod_list = array();
+		// Long-running operation example, leveraging a queue:
+		// Fetch feeds from other sites.
+		$feeds = db_query_range('SELECT * FROM {intel_product_feed}
+					WHERE checked + refresh < :time 
+					AND refresh <> :never',0, ProductFeed::INTEL_PRODUCT_FEED_FETCH_NUMBER,
+					array(
+						':time' => REQUEST_TIME,
+						':never' => ProductFeed::INTEL_PRODUCT_FEED_NOT_REFRESH,
+					))->fetchAll();
+		
+		foreach ($feeds as $feed){
+			if(!array_key_exists($feed->product_type,$prod_list)){
+				$prod_list[$feed->product_type] = array();
+			}
+				array_push($prod_list[$feed->product_type],$feed->pconline_id);
+		}
+				
+		if(!empty($prod_list)){
+			$data_crawling_queue = DrupalQueue::get('data_crawling');
+			$data_crawling_queue->createItem($prod_list);
+			
+			$data_fix_queue = DrupalQueue::get('data_fix');
+			$data_fix_queue->createItem($prod_list);
+			
+			$data_merge_queue = DrupalQueue::get('data_merge');
+			$data_merge_queue->createItem($prod_list);
+			
+			$data_download_queue = DrupalQueue::get('data_download');
+			$data_download_queue->createItem($prod_list);
+			
+			$product_feed_refresh_queue = DrupalQueue::get('product_feed_refresh');
+			$product_feed_refresh_queue->createItem($prod_list);
+		}		
+		
+	}
+	
+} 
+
+/**
+ * Implements of hook_cron_queue_info()
+ * 
+ * @return multitype:string number multitype:string number
+ */
+function shop_spider_cron_queue_info(){
+	
+	$queues['data_crawling'] = array(
+		'worker callback' => '_spider_data_crawling',
+		'time' => 90,	
+	);
+	$queues['data_fix'] = array(
+		'worker callback' => '_spider_data_fix',
+		'time' => 30,
+	);
+	$queues['data_merge'] = array(
+		'worker callback' => '_spider_data_merge',
+		'time' => 30,
+	);
+	$queues['data_download'] = array(
+		'worker callback' => '_spider_data_download',
+		'time' => 30,
+	);
+	$queues['product_feed_refresh'] = array(
+		'worker callback' => '_spider_product_feed_refresh',
+		'time' => 30,
+	);
+	
+	return $queues;
+}
+
+
+/**
+ * 
+ * @param unknown $step
+ */
+function _spider_loader($step){	
+	$dataSpiderFactory = new DataSpiderFactory();
+	$dataSpiderFactory->newProductIds = $_SESSION['new_product_ids'];
+	
+	switch ($step){
+		case 's1':
+			$dataSpiderFactory->crawling();
+			break;
+		case 's2':
+			$dataSpiderFactory->fix();
+			break;
+		case 's3':
+			$dataSpiderFactory->merge();
+			break;
+		case 's4':
+			$dataSpiderFactory->download();
+			break;
+	}
+}
+
+/**
+ * Form constructor for shop spider administration form
+ *
+ * @return multitype:string NULL
+ */
+function shop_spider_form() {
+	$form = array ();
+	// teblet
+	$form ['teblet'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Tablet' )
+	);
+
+	$form ['teblet'] ['tablet_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// 2in1
+	$form ['2in1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( '2in1' )
+	);
+
+	$form ['2in1'] ['2in1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// desktop
+	$form ['desktop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Desktop' )
+	);
+
+	$form ['desktop'] ['desktop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// laptop
+	$form ['laptop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Laptop' )
+	);
+
+	$form ['laptop'] ['laptop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// allin1
+	$form ['allin1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Allin1' )
+	);
+
+	$form ['allin1'] ['allin1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mobile
+	$form ['mobile'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'mobile' )
+	);
+
+	$form ['mobile'] ['mobile_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// cpu
+	$form ['cpu'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'CPU' )
+	);
+
+	$form ['cpu'] ['cpu_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// ssd
+	$form ['ssd'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'SSD' )
+	);
+
+	$form ['ssd'] ['ssd_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mainboard
+	$form ['mainboard'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Mainboard' )
+	);
+
+	$form ['mainboard'] ['mainboard_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+
+	$form ['submit'] = array (
+			'#type' => 'submit',
+			'#value' => t ( 'Submit' )
+	);
+	
+// 	ProductFeedStorage::expire();
+
+	return $form;
+}
+
+
+/**
+ * Implements of hook_form_submit()
+ *
+ * @param unknown $form
+ * @param unknown $form_state
+ */
+function shop_spider_form_submit($form,&$form_state){
+	//dpm($_SESSION['new_product_ids']);
+	//print 'submit:';
+	//print '<pre>';print_r($_SESSION['new_product_ids']);print '</pre>';exit;
+	//print '<pre>';print_r($form);print '</pre>';
+	drupal_goto('shop_spider/s1');
+}
+
+/**
+ * Implements of hook_form_validate()
+ * 
+ * @param unknown $form
+ * @param unknown $form_state
+ */
+function shop_spider_form_validate($form,&$form_state){
+	
+	//dpm('Validate:'.$form_state);
+	
+	if(!empty($_SESSION['new_product_ids'])){
+		unset($_SESSION['new_product_ids']);
+	}
+
+	//print '<pre>';print_r( preg_match('/^(\d+(,\d+)*)?$/','537414,5954') );print '</pre>';exit;
+	//$_SESSION['new_product_ids'] = $form_state['values'];
+
+	if(!empty($form_state['values']['tablet_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['tablet_pids'])){
+			$_SESSION['new_product_ids']['tablet'] = explode(',',check_plain($form_state['values']['tablet_pids']));
+		}else{
+			form_set_error('tablet_pids',t('Tablet Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['2in1_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['2in1_pids'])){
+			$_SESSION['new_product_ids']['2in1'] = explode(',',check_plain($form_state['values']['2in1_pids']));
+		}else{
+			form_set_error('2in1_pids',t('2in1 Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['desktop_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['desktop_pids'])){
+			$_SESSION['new_product_ids']['desktop'] = explode(',',check_plain($form_state['values']['desktop_pids']));
+		}
+		else{
+			form_set_error('desktop_pids',t('Desktop Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['laptop_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['laptop_pids'])){
+			$_SESSION['new_product_ids']['laptop'] = explode(',',check_plain($form_state['values']['laptop_pids']));
+		}
+		else{
+			form_set_error('laptop_pids',t('Laptop Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['allin1_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['allin1_pids'])){
+			$_SESSION['new_product_ids']['allin1'] = explode(',',check_plain($form_state['values']['allin1_pids']));
+		}else{
+			form_set_error('allin1_pids',t('Allin1 Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['mobile_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mobile_pids'])){
+			$_SESSION['new_product_ids']['mobile'] = explode(',',check_plain($form_state['values']['mobile_pids']));
+		}else{
+			form_set_error('mobile_pids',t('Mobile Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['cpu_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['cpu_pids'])){
+			$_SESSION['new_product_ids']['cpu'] = explode(',',check_plain($form_state['values']['cpu_pids']));
+		}else{
+			form_set_error('cpu_pids',t('CPU Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['ssd_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['ssd_pids'])){
+			$_SESSION['new_product_ids']['ssd'] = explode(',',check_plain($form_state['values']['ssd_pids']));
+		}else{
+			form_set_error('ssd_pids',t('SSD Ids Format error'));
+		}
+	}
+
+	if(!empty($form_state['values']['mainboard_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mainboard_pids'])){
+			$_SESSION['new_product_ids']['mainboard'] = explode(',',check_plain($form_state['values']['mainboard_pids']));
+		}else{
+			form_set_error('mainboard_pids',t('Mainboard Ids Format error'));
+		}
+	}
+
+	if( empty($form_state['values']['tablet_pids']) && empty($form_state['values']['2in1_pids']) && empty($form_state['values']['desktop_pids']) &&
+			empty($form_state['values']['laptop_pids']) && empty($form_state['values']['allin1_pids']) && empty($form_state['values']['mobile_pids']) &&
+			empty($form_state['values']['cpu_pids']) && empty($form_state['values']['ssd_pids']) && empty($form_state['values']['mainboard_pids']) )
+	{
+		form_set_error('',t('Value can\'t be empty'));
+	}
+
+	//print '<pre>';print_r($form_state);print '</pre>';exit;
+	//print '<pre>';print_r($_SESSION['new_product_ids']);print '</pre>';exit;
+}
+
+/**
+ * Implementation of hook_form()
+ *
+ * @return multitype:multitype:string NULL
+ */
+function shop_spider_product_import_form(){
+	$form = array ();
+	// teblet
+	$form ['teblet'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Tablet' )
+	);
+	
+	$form ['teblet'] ['tablet_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// 2in1
+	$form ['2in1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( '2in1' )
+	);
+	
+	$form ['2in1'] ['2in1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// desktop
+	$form ['desktop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Desktop' )
+	);
+	
+	$form ['desktop'] ['desktop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// laptop
+	$form ['laptop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Laptop' )
+	);
+	
+	$form ['laptop'] ['laptop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// allin1
+	$form ['allin1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Allin1' )
+	);
+	
+	$form ['allin1'] ['allin1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mobile
+	$form ['mobile'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'mobile' )
+	);
+	
+	$form ['mobile'] ['mobile_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// cpu
+	$form ['cpu'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'CPU' )
+	);
+	
+	$form ['cpu'] ['cpu_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// ssd
+	$form ['ssd'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'SSD' )
+	);
+	
+	$form ['ssd'] ['ssd_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mainboard
+	$form ['mainboard'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Mainboard' )
+	);
+	
+	$form ['mainboard'] ['mainboard_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	
+	$form ['submit'] = array (
+			'#type' => 'submit',
+			'#value' => t ( 'Submit' )
+	);
+	
+	//ProductFeedStorage::expire();	
+	return $form;
+}
+
+/**
+ * Implementation of hook_form_validate()
+ *
+ * @param unknown $form
+ * @param unknown $form_state
+ */
+function shop_spider_product_import_form_validate($form,&$form_state){
+
+	if(!empty($form_state['values']['tablet_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['tablet_pids'])){
+			form_set_error('tablet_pids',t('Tablet Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['2in1_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['2in1_pids'])){
+			form_set_error('2in1_pids',t('2in1 Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['desktop_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['desktop_pids'])){
+			form_set_error('desktop_pids',t('Desktop Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['laptop_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['laptop_pids'])){
+			form_set_error('laptop_pids',t('Laptop Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['allin1_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['allin1_pids'])){
+			form_set_error('allin1_pids',t('Allin1 Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['mobile_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mobile_pids'])){
+			form_set_error('mobile_pids',t('Mobile Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['cpu_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['cpu_pids'])){
+			form_set_error('cpu_pids',t('CPU Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['ssd_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['ssd_pids'])){
+			form_set_error('ssd_pids',t('SSD Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['mainboard_pids'])){
+		if(!preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mainboard_pids'])){
+			form_set_error('mainboard_pids',t('Mainboard Ids Format error'));
+		}
+	}
+	
+	if( empty($form_state['values']['tablet_pids']) && empty($form_state['values']['2in1_pids']) && empty($form_state['values']['desktop_pids']) &&
+			empty($form_state['values']['laptop_pids']) && empty($form_state['values']['allin1_pids']) && empty($form_state['values']['mobile_pids']) &&
+			empty($form_state['values']['cpu_pids']) && empty($form_state['values']['ssd_pids']) && empty($form_state['values']['mainboard_pids']) )
+	{
+		form_set_error('',t('Value can\'t be empty'));
+	}
+}
+
+/**
+ * Implementation of hook_form_submit()
+ * Save file to server and import to database
+ *
+ * @param unknown $form
+ * @param unknown $form_state
+ */
+function shop_spider_product_import_form_submit($form,&$form_state){
+	if(!empty($form_state['values']['tablet_pids'])){
+		
+		$tablet_pids = explode(',',$form_state['values']['tablet_pids']);
+		foreach ($tablet_pids as $id){
+			ProductFeedStorage::import($id,'tablet');
+		}
+	}
+	
+	if(!empty($form_state['values']['2in1_pids'])){
+		
+		$_2in1_pids = explode(',',$form_state['values']['2in1_pids']);
+		foreach ($_2in1_pids as $id){
+			ProductFeedStorage::import($id,'2in1');
+		}
+	}
+	
+	if(!empty($form_state['values']['desktop_pids'])){
+		
+		$desktop_pids = explode(',',$form_state['values']['desktop_pids']);
+		foreach ($desktop_pids as $id){
+			ProductFeedStorage::import($id,'desktop');
+		}
+	}
+	
+	if(!empty($form_state['values']['laptop_pids'])){
+		
+		$laptop_pids = explode(',',$form_state['values']['laptop_pids']);
+		foreach ($laptop_pids as $id){
+			ProductFeedStorage::import($id,'laptop');
+		}
+	}
+	
+	if(!empty($form_state['values']['allin1_pids'])){
+		
+		$allin1_pids = explode(',',$form_state['values']['allin1_pids']);
+		foreach ($allin1_pids as $id){
+			ProductFeedStorage::import($id,'allin1');
+		}
+	}
+	
+	if(!empty($form_state['values']['mobile_pids'])){
+		
+		$mobile_pids = explode(',',$form_state['values']['mobile_pids']);
+		foreach ($mobile_pids as $id){
+			ProductFeedStorage::import($id,'mobile');
+		}
+	}
+	
+	if(!empty($form_state['values']['cpu_pids'])){
+		
+		$cpu_pids = explode(',',$form_state['values']['cpu_pids']);
+		foreach ($cpu_pids as $id){
+			ProductFeedStorage::import($id,'cpu');
+		}
+	}
+	
+	if(!empty($form_state['values']['ssd_pids'])){
+		
+		$ssd_pids = explode(',',$form_state['values']['ssd_pids']);
+		foreach ($ssd_pids as $id){
+			ProductFeedStorage::import($id,'ssd');
+		}
+	}
+	
+	if(!empty($form_state['values']['mainboard_pids'])){
+		
+		$mainboard_pids = explode(',',$form_state['values']['mainboard_pids']);
+		foreach ($mainboard_pids as $id){
+			ProductFeedStorage::import($id,'mainboard');
+		}
+	}
+	
+}
+
+/**
+ * Called by cron worker 
+ * 
+ * @param unknown $prod_list
+ */
+function _spider_data_crawling($prod_list){
+	$dsf = new DataSpiderFactory();
+	$dsf->newProductIds = $prod_list;
+	$dsf->crawling();	
+}
+
+
+/**
+ * Called by cron worker
+ *
+ * @param unknown $prod_list
+ */
+function _spider_data_fix($prod_list){
+	$dsf = new DataSpiderFactory();
+	$dsf->newProductIds = $prod_list;
+	$dsf->fix();
+}
+
+/**
+ * Called by cron worker
+ *
+ * @param unknown $prod_list
+ */
+function _spider_data_merge($prod_list){
+	$dsf = new DataSpiderFactory();
+	$dsf->newProductIds = $prod_list;
+	$dsf->merge();
+}
+
+/**
+ * Called by cron worker
+ *
+ * @param unknown $prod_list
+ */
+function _spider_data_download($prod_list){
+	$dsf = new DataSpiderFactory();
+	$dsf->newProductIds = $prod_list;
+	$dsf->download();
+}
+
+/**
+ * Called by cron worker to refresh product feed. 
+ * 
+ * @param unknown $prod_list
+ */
+function _spider_product_feed_refresh($prod_list){
+	
+	foreach ($prod_list as $prod_type => $ids){
+		foreach ($ids as $id){
+			ProductFeedStorage::refresh($id);
+		}
+	}	
+	
+}

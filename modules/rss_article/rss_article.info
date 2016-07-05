@@ -1,0 +1,5 @@
+core          = "7.x"
+description   = "This module use for rss article, query data form database."
+name          = "rss_article"
+package       = _rss_article
+version 	  = "7.x-dev"

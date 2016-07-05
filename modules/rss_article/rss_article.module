@@ -1,0 +1,45 @@
+<?php
+/**
+ * Implements hook_menu();
+ *
+ * @return multitype:
+ */
+function rss_article_menu() {
+	// define your custom path here
+	$items['rss_article'] = array(
+			'page callback' => 'rss_article_custompage',
+			'page arguments' => array(),
+			'access arguments' => array('access content'),
+			'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function rss_article_custompage() {
+	
+		//联合查询（Join）
+		$query = db_select('node','n'); //主表
+		$query->join('field_data_body', 'f', 'n.nid = f.entity_id'); // 联合node表,条件是nid
+// 		$query->groupBy('f.entity_id');//GROUP BY node nid
+		//     $query->condition('n.type','article','=');
+		//     $query->condition('n.status','0','>');  //发布状态
+		$query->fields('n',array('nid','title','created'))  //查询nid
+		->fields('f',array('body_value'))
+		->orderBy('created','DESC'); //排序条件
+		//$query->range(0,4); //取得4条数据
+		$result = $query->execute();
+	
+		$record = $result->fetchAll();
+		
+		return theme('rss_article_custompage_template',array('record'=>$record));
+}
+
+function rss_article_theme($existing, $type, $theme, $path) {
+	$themes = array (
+			'rss_article_custompage_template' => array(
+			'template' => 'rss_article', // your template file called rss_article.tpl.php
+			'arguments' => array('record'=>NULL),
+			),
+	);
+	return $themes;
+}

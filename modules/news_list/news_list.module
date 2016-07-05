@@ -1,0 +1,110 @@
+<?php
+/**
+ * Implements hook_menu();
+ *
+ * @return multitype:
+ */
+function news_list_menu() {
+	// define your custom path here
+	$items['imperatives'] = array(
+			'page callback' => 'imperatives_custompage',
+			'page arguments' => array(),
+			'access arguments' => array('access content'),
+			'type' => MENU_CALLBACK,
+	);
+
+	$items['intelligence'] = array(
+			'page callback' => 'intelligence_custompage',
+			'page arguments' => array(),
+			'access arguments' => array('access content'),
+			'type' => MENU_CALLBACK,
+	);
+
+	$items['innovation'] = array(
+			'page callback' => 'innovation_custompage',
+			'page arguments' => array(),
+			'access arguments' => array('access content'),
+			'type' => MENU_CALLBACK,
+	);
+	return $items;
+}
+
+function imperatives_custompage() {
+	
+		//联合查询（Join）
+		$query = db_select('node','n'); //主表
+		$query->join('field_data_body', 'f', 'n.nid = f.entity_id'); // 联合node表,条件是nid
+// 		$query->groupBy('f.entity_id');//GROUP BY node nid
+		//     $query->condition('n.type','article','=');
+		//     $query->condition('n.status','0','>');  //发布状态
+		$query->fields('n',array('nid','title','created'))  //查询nid
+		->fields('f',array('body_value'))
+		->condition('n.type','imperatives','=')
+		->orderBy('created','DESC'); //排序条件
+		//$query->range(0,4); //取得4条数据
+		$result = $query->execute();
+	
+		$record = $result->fetchAll();
+		
+		return theme('imperatives_custompage_template',array('record'=>$record));
+}
+
+function intelligence_custompage() {
+	
+		$query = db_select('node','n'); //主表
+		$query->join('field_data_body', 'f', 'n.nid = f.entity_id'); // 联合node表,条件是nid
+		$query->fields('n',array('nid','title','created'))  //查询nid
+		->fields('f',array('body_value'))
+		->condition('n.type','intelligence','=')
+		->orderBy('created','DESC'); //排序条件
+		$result = $query->execute();
+	
+		$record = $result->fetchAll();
+		
+		return theme('intelligence_custompage_template',array('record'=>$record));
+}
+
+function innovation_custompage() {
+	
+		$query = db_select('node','n'); //主表
+		$query->join('field_data_body', 'f', 'n.nid = f.entity_id'); // 联合node表,条件是nid
+		$query->fields('n',array('nid','title','created'))  //查询nid
+		->fields('f',array('body_value'))
+		->condition('n.type','innovation','=')
+		->orderBy('created','DESC'); //排序条件
+		$result = $query->execute();
+	
+		$record = $result->fetchAll();
+		
+		return theme('innovation_custompage_template',array('record'=>$record));
+}
+
+function news_list_theme($existing, $type, $theme, $path) {
+	$themes = array (
+			'imperatives_custompage_template' => array(
+			'template' => 'news_list', // your template file called news_list.tpl.php
+			'arguments' => array('record'=>NULL),
+			),
+			'intelligence_custompage_template' => array(
+			'template' => 'news_list', // your template file called news_list.tpl.php
+			'arguments' => array('record'=>NULL),
+			),
+			'innovation_custompage_template' => array(
+			'template' => 'news_list', // your template file called news_list.tpl.php
+			'arguments' => array('record'=>NULL),
+			),
+	);
+	return $themes;
+}
+
+/**
+ * Implements hook_admin_paths().
+*
+* Add IMCE to admin paths.
+*/
+function news_list_admin_paths() {
+	$paths = array(
+			'imce' => TRUE,
+	);
+	return $paths;
+}

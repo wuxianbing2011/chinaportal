@@ -1,0 +1,8 @@
+core          = "7.x"
+description   = "This module is for intel shop product data crawling, fix, merge from PConline to intel shop."
+name          = "Shop Spider"
+package       = _intel_shop
+
+version = "7.x-dev"
+
+dependencies[] = xautoload

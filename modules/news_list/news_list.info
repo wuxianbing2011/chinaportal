@@ -1,0 +1,5 @@
+core          = "7.x"
+description   = "This module is news list."
+name          = "news_list"
+package       = chinaportal
+version 	  = "7.x-dev"

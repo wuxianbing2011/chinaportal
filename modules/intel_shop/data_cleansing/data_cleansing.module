@@ -1,0 +1,314 @@
+<?php 
+
+use Drupal\data_cleansing\DataCleansingFactory;
+
+/**
+ * Implementation of hook_permission()
+ * 
+ * @return multitype:string
+ */
+function data_cleansing_permission(){
+	return array(
+		'administer data cleansing' => array(
+			'title' => t('Administer data cleansing'),
+			'description' => t('Perform administration tasks for data cleansing.'),
+		),
+		'perform data cleansing' => array(
+			'title' => t('Perform data cleansing'),
+			'description' => t('Perform tasks for data cleansing.'),
+		),
+	);
+}
+
+/**
+ * Implementation of hook_menu()
+ * 
+ * @return multitype:multitype:string multitype:string  NULL
+ */
+function data_cleansing_menu(){
+	$items = array();
+	//admin form
+	$items['intel_data_cleansing/products_delete'] = array(
+			'title' => t('Intel Products delete'),
+			'description' => t('Products delete permanently.'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('data_cleansing_products_delete_form'),
+			'access arguments' => array('perform data cleansing'),
+			'type' => MENU_NORMAL_ITEM,
+			//'file' => 'shop_spider.admin.inc',
+	);
+	
+	$items['intel_data_cleansing/products_purchase_link_import'] = array(
+			'title' => t('Intel Products Purchase Link Import'),
+			'description' => t('Products purchase link import.'),
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('data_cleansing_product_purchase_link_import_form'),
+			'access arguments' => array('perform data cleansing'),
+			'type' => MENU_NORMAL_ITEM,
+			'file' => 'data_cleansing.inc',
+	);
+	
+	return $items;
+}
+
+/**
+ * Implementation of hook_form()
+ * 
+ * @return multitype:string NULL
+ */
+function data_cleansing_products_delete_form(){
+	$form = array ();
+	// teblet
+	$form ['teblet'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Tablet' )
+	);
+	
+	$form ['teblet'] ['tablet_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// 2in1
+	$form ['2in1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( '2in1' )
+	);
+	
+	$form ['2in1'] ['2in1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// desktop
+	$form ['desktop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Desktop' )
+	);
+	
+	$form ['desktop'] ['desktop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// laptop
+	$form ['laptop'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Laptop' )
+	);
+	
+	$form ['laptop'] ['laptop_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// allin1
+	$form ['allin1'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Allin1' )
+	);
+	
+	$form ['allin1'] ['allin1_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mobile
+	$form ['mobile'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'mobile' )
+	);
+	
+	$form ['mobile'] ['mobile_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// cpu
+	$form ['cpu'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'CPU' )
+	);
+	
+	$form ['cpu'] ['cpu_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// ssd
+	$form ['ssd'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'SSD' )
+	);
+	
+	$form ['ssd'] ['ssd_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	// mainboard
+	$form ['mainboard'] = array (
+			'#type' => 'fieldset',
+			'#title' => t ( 'Mainboard' )
+	);
+	
+	$form ['mainboard'] ['mainboard_pids'] = array (
+			'#type' => 'textarea',
+			'#title' => t ( 'Product Ids' ),
+			'#description' => t ( 'The product ids need to be filled in here.
+				Use a comma-separated list of phrases. Example: 537414,582954,592308' )
+	);
+	
+	$form ['submit'] = array (
+			'#type' => 'submit',
+			'#value' => t ( 'Submit' )
+	);
+	
+	return $form;
+}
+
+function data_cleansing_products_delete_form_submit($form,&$form_state){
+	
+	if(!empty($form_state['values']['tablet_pids'])){
+		_data_cleansing_products_delete('tablet',$form_state['values']['tablet_pids']);
+		drupal_set_message(t('tablet ids: ['.implode(',',$form_state['values']['tablet_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['2in1_pids'])){
+		_data_cleansing_products_delete('2in1',$form_state['values']['2in1_pids']);
+		drupal_set_message(t('2in1 ids: ['.implode(',',$form_state['values']['2in1_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['desktop_pids'])){
+		_data_cleansing_products_delete('desktop',$form_state['values']['desktop_pids']);
+		drupal_set_message(t('desktop ids: ['.implode(',',$form_state['values']['desktop_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['laptop_pids'])){
+		_data_cleansing_products_delete('laptop',$form_state['values']['laptop_pids']);
+		drupal_set_message(t('laptop ids: ['.implode(',',$form_state['values']['laptop_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['allin1_pids'])){
+		_data_cleansing_products_delete('allin1',$form_state['values']['allin1_pids']);
+		drupal_set_message(t('allin1 ids: ['.implode(',',$form_state['values']['allin1_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['mobile_pids'])){
+		_data_cleansing_products_delete('mobile',$form_state['values']['mobile_pids']);
+		drupal_set_message(t('mobile ids: ['.implode(',',$form_state['values']['mobile_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['cpu_pids'])){
+		_data_cleansing_products_delete('cpu',$form_state['values']['cpu_pids']);
+		drupal_set_message(t('cpu ids: ['.implode(',',$form_state['values']['cpu_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['ssd_pids'])){
+		_data_cleansing_products_delete('ssd',$form_state['values']['ssd_pids']);
+		drupal_set_message(t('ssd ids: ['.implode(',',$form_state['values']['ssd_pids']).'], has been deleted'),'status');
+	}
+	
+	if(!empty($form_state['values']['mainboard_pids'])){
+		_data_cleansing_products_delete('mainboard',$form_state['values']['mainboard_pids']);
+		drupal_set_message(t('mainboard ids: ['.implode(',',$form_state['values']['mainboard_pids']).'], has been deleted'),'status');
+	}
+	
+}
+
+function data_cleansing_products_delete_form_validate($form,&$form_state){
+	
+	if(!empty($form_state['values']['tablet_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['tablet_pids'])){			
+			$form_state['values']['tablet_pids'] = explode(',',check_plain($form_state['values']['tablet_pids']));
+		}else{
+			form_set_error('tablet_pids',t('Tablet Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['2in1_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['2in1_pids'])){
+			$form_state['values']['2in1_pids'] = explode(',',check_plain($form_state['values']['2in1_pids']));
+		}else{
+			form_set_error('2in1_pids',t('2in1 Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['desktop_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['desktop_pids'])){
+			$form_state['values']['desktop_pids'] = explode(',',check_plain($form_state['values']['desktop_pids']));
+		}
+		else{
+			form_set_error('desktop_pids',t('Desktop Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['laptop_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['laptop_pids'])){
+			$form_state['values']['laptop_pids'] = explode(',',check_plain($form_state['values']['laptop_pids']));
+		}
+		else{
+			form_set_error('laptop_pids',t('Laptop Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['allin1_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['allin1_pids'])){
+			$form_state['values']['allin1_pids'] = explode(',',check_plain($form_state['values']['allin1_pids']));
+		}else{
+			form_set_error('allin1_pids',t('Allin1 Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['mobile_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mobile_pids'])){
+			$form_state['values']['mobile_pids'] = explode(',',check_plain($form_state['values']['mobile_pids']));
+		}else{
+			form_set_error('mobile_pids',t('Mobile Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['cpu_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['cpu_pids'])){
+			$form_state['values']['cpu_pids'] = explode(',',check_plain($form_state['values']['cpu_pids']));
+		}else{
+			form_set_error('cpu_pids',t('CPU Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['ssd_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['ssd_pids'])){
+			$form_state['values']['ssd_pids'] = explode(',',check_plain($form_state['values']['ssd_pids']));
+		}else{
+			form_set_error('ssd_pids',t('SSD Ids Format error'));
+		}
+	}
+	
+	if(!empty($form_state['values']['mainboard_pids'])){
+		if(preg_match('/^(\d+(,\d+)*)?$/',$form_state['values']['mainboard_pids'])){
+			$form_state['values']['mainboard_pids'] = explode(',',check_plain($form_state['values']['mainboard_pids']));
+		}else{
+			form_set_error('mainboard_pids',t('Mainboard Ids Format error'));
+		}
+	}
+	
+	if( empty($form_state['values']['tablet_pids']) && empty($form_state['values']['2in1_pids']) && empty($form_state['values']['desktop_pids']) &&
+			empty($form_state['values']['laptop_pids']) && empty($form_state['values']['allin1_pids']) && empty($form_state['values']['mobile_pids']) &&
+			empty($form_state['values']['cpu_pids']) && empty($form_state['values']['ssd_pids']) && empty($form_state['values']['mainboard_pids']) )
+	{
+		form_set_error('',t('Value can\'t be empty'));
+	}
+}
+
+function _data_cleansing_products_delete($type, $ids){
+	$DCObj = new DataCleansingFactory($type, $ids);
+	$DCObj->delete();
+}

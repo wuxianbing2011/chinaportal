@@ -1,0 +1,320 @@
+<?php
+/**
+* Implements hook_block_info().
+*/
+function promoted_news_block_info() {
+	$blocks = array();
+	
+	//imperatives
+	$blocks['imperatives'] = array(
+			'info' => t('imperatives'),
+	);
+	//intelligence
+	$blocks['intelligence'] = array(
+			'info' => t('intelligence'),
+	);
+	//innovation
+	$blocks['innovation'] = array(
+			'info' => t('innovation'),
+	);
+
+	return $blocks;
+}
+
+
+
+/**
+ * Implements hook_block_configure().
+ */
+function promoted_news_block_configure($delta='') {
+  	$form = array();
+  	switch($delta) {
+  		case 'imperatives' :
+//       // Text field form element
+//       $form['text_body'] = array(
+//         '#type' => 'text_format',
+//         '#title' => t('Enter your text here in WYSIWYG format'),
+//         '#default_value' => variable_get('text_variable', ''),
+//       );
+
+      // File selection form element
+      	$form['file'] = array(
+      	'#name' => 'block_image',
+      	'#type' => 'managed_file',
+      	'#title' => t('Choose an Image File'),
+      	'#description' => t('Select an Image(size:480*280) for the custom block.  Only *.gif, *.png, *.jpg, and *.jpeg images allowed.'),
+      	'#default_value' => variable_get('block_image_fid0', ''),
+      	'#upload_location' => 'public://block_image/',
+      	'#upload_validators' => array(
+      	'file_validate_extensions' => array('gif png jpg jpeg'),
+      	),
+      	);
+      	break;
+      
+
+      case 'intelligence' :
+      
+      	// File selection form element
+      	$form['file'] = array(
+      	'#name' => 'block_image',
+      	'#type' => 'managed_file',
+      	'#title' => t('Choose an Image File'),
+      	'#description' => t('Select an Image(size:480*280) for the custom block.  Only *.gif, *.png, *.jpg, and *.jpeg images allowed.'),
+      	'#default_value' => variable_get('block_image_fid1', ''),
+      	'#upload_location' => 'public://block_image/',
+      	'#upload_validators' => array(
+      	'file_validate_extensions' => array('gif png jpg jpeg'),
+      	),
+      	);
+      	break;
+      
+
+      case 'innovation' :
+      
+      	// File selection form element
+      	$form['file'] = array(
+      	'#name' => 'block_image',
+      	'#type' => 'managed_file',
+      	'#title' => t('Choose an Image File'),
+      	'#description' => t('Select an Image(size:480*280) for the custom block.  Only *.gif, *.png, *.jpg, and *.jpeg images allowed.'),
+      	'#default_value' => variable_get('block_image_fid2', ''),
+      	'#upload_location' => 'public://block_image/',
+      	'#upload_validators' => array(
+      	'file_validate_extensions' => array('gif png jpg jpeg'),
+      	),
+      	);
+      	break;
+     }
+      return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function promoted_news_block_save($delta = '', $edit = array()) {
+	switch($delta) {
+		case 'imperatives' :
+// 			// Saving the WYSIWYG text
+// 			variable_set('text_variable', $edit['text_body']['value']);
+
+			// Saving the file, setting it to a permanent state, setting a FID variable
+			$file = file_load($edit['file']);
+			$file->status = FILE_STATUS_PERMANENT;
+			file_save($file);
+			$block = block_load('promoted_news', $delta);
+			file_usage_add($file, 'promoted_news', 'block', $block->bid);
+			variable_set('block_image_fid0', $file->fid);
+			break;
+
+		case 'intelligence' :
+			$file = file_load($edit['file']);
+			$file->status = FILE_STATUS_PERMANENT;
+			file_save($file);
+			$block = block_load('promoted_news', $delta);
+			file_usage_add($file, 'promoted_news', 'block', $block->bid);
+			variable_set('block_image_fid1', $file->fid);
+			break;
+
+		case 'innovation' :
+			$file = file_load($edit['file']);
+			$file->status = FILE_STATUS_PERMANENT;
+			file_save($file);
+			$block = block_load('promoted_news', $delta);
+			file_usage_add($file, 'promoted_news', 'block', $block->bid);
+			variable_set('block_image_fid2', $file->fid);
+			break;
+	}
+}
+
+
+
+
+/**
+ * Implements hook_block_view().
+ */
+function promoted_news_block_view($delta = '') {
+	$block = array();
+	switch ($delta) {
+		case 'imperatives':
+			$block['subject'] = '';
+			$block['content'] = _promoted_news_imperatives_content();
+			break;
+			
+		case 'intelligence':
+			$block['subject'] = '';
+			$block['content'] = _promoted_news_intelligence_content();
+			break;
+			
+		case 'innovation':
+			$block['subject'] = '';
+			$block['content'] = _promoted_news_innovation_content();
+			break;
+			
+	}
+	return $block;
+}
+
+
+/*
+ * imperatives
+ * */
+function _promoted_news_imperatives_content() {
+	
+	$block = array();
+	
+	// Capture WYSIWYG text from the variable
+// 	$text = variable_get('text_variable', '');
+	
+	// Capture the image file path and form into HTML with attributes
+	$image_file = file_load(variable_get('block_image_fid0', ''));
+	$image_path = '';
+	
+	if (isset($image_file->uri)) {
+		$image_path = $image_file->uri;
+	}
+	
+	$image = theme_image(array(
+			'path' => ($image_path),
+			'alt' => t('imperatives'),
+			'title' => t('imperatives'),
+			'attributes' => array('class' => 'class_name'),
+	));
+	
+	// Block output in HTML with div wrapper
+	$block = array(
+			'image' => array(
+					'#prefix' => '',
+					'#type' => 'imperatives',
+					'#markup' => $image,
+			),
+// 			'message' => array(
+// 					'#type' => 'markup',
+// 					'#markup' => $text,
+// 					'#suffix' => '',
+// 			),
+	);
+	
+// 	return $block;
+	
+	
+	$query = db_select('node','n'); //主表
+	$query->join('field_data_body', 'f', 'n.nid = f.entity_id'); // 联合node表,条件是nid
+	// 		$query->groupBy('f.entity_id');//GROUP BY node nid
+	//     $query->condition('n.type','article','=');
+	//     $query->condition('n.status','0','>');  //发布状态
+	$query->fields('n',array('nid','title','created','type'))  //查询nid
+	->fields('f',array('body_value'))
+	->condition('n.type','imperatives','=')
+	->orderBy('created','DESC'); //排序条件
+	$query->range(0,5); //取得5条数据
+	$result = $query->execute();
+	$record = $result->fetchAll();
+	
+	$record = array_merge($record,$block);
+// 	print_r($record_imperatives);
+		return theme('promoted_news_custompage_template',array('record'=>$record));
+}
+
+
+/*
+ * intelligence
+ * */
+function _promoted_news_intelligence_content() {
+
+	$block = array();
+
+	$image_file = file_load(variable_get('block_image_fid1', ''));
+	$image_path = '';
+
+	if (isset($image_file->uri)) {
+		$image_path = $image_file->uri;
+	}
+
+	$image = theme_image(array(
+			'path' => ($image_path),
+			'alt' => t('intelligence'),
+			'title' => t('intelligence'),
+			'attributes' => array('class' => 'class_name'),
+	));
+
+	$block = array(
+			'image' => array(
+					'#prefix' => '',
+					'#type' => 'intelligence',
+					'#markup' => $image,
+			),
+	);
+
+	$query = db_select('node','n');
+	$query->join('field_data_body', 'f', 'n.nid = f.entity_id');
+	$query->fields('n',array('nid','title','created','type'))
+	->fields('f',array('body_value'))
+	->condition('n.type','intelligence','=')
+	->orderBy('created','DESC');
+	$query->range(0,5);
+	$result = $query->execute();
+	$record = $result->fetchAll();
+
+	$record = array_merge($record,$block);
+// 	print_r($record_intelligence);
+	return theme('promoted_news_custompage_template',array('record'=>$record));
+}
+
+
+/*
+ * innovation
+ * */
+function _promoted_news_innovation_content() {
+
+	$block = array();
+
+	$image_file = file_load(variable_get('block_image_fid2', ''));
+	$image_path = '';
+
+	if (isset($image_file->uri)) {
+		$image_path = $image_file->uri;
+	}
+
+	$image = theme_image(array(
+			'path' => ($image_path),
+			'alt' => t('innovation'),
+			'title' => t('innovation'),
+			'attributes' => array('class' => 'class_name'),
+	));
+
+	$block = array(
+			'image' => array(
+					'#prefix' => '',
+					'#type' => 'innovation',
+					'#markup' => $image,
+			),
+	);
+
+	$query = db_select('node','n');
+	$query->join('field_data_body', 'f', 'n.nid = f.entity_id');
+	$query->fields('n',array('nid','title','created','type'))
+	->fields('f',array('body_value'))
+	->condition('n.type','innovation','=')
+	->orderBy('created','DESC');
+	$query->range(0,5);
+	$result = $query->execute();
+	$record = $result->fetchAll();
+
+	$record= array_merge($record,$block);
+// 	print_r($record_innovation);
+	return theme('promoted_news_custompage_template',array('record'=>$record));
+}
+
+/*
+ * promoted_news_theme()
+ * */
+function promoted_news_theme($existing, $type, $theme, $path) {
+	$themes = array (
+			'promoted_news_custompage_template' => array(
+			'template' => 'promoted_news', // your template file called promoted_news.tpl.php
+			'arguments' => array('record'=>NULL),
+			),
+	);
+// 	print_r($themes);exit;
+	return $themes;
+}

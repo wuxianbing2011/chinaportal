@@ -1,0 +1,157 @@
+@charset "utf-8";
+/* CSS Document */
+/*init*/
+/* 清除内外边距 */
+body, h1, h2, h3, h4, h5, h6, hr, p, blockquote, /* structural elements 结构元素 */ dl, dt, dd, ul, ol, li, /* list elements 列表元素 */ pre, /* text formatting elements 文本格式元素 */ fieldset, lengend, button, input, textarea, /* form elements 表单元素 */table,tr, th, td { /* table elements 表格元素 */
+	margin: 0;
+	padding: 0; outline:none;
+}
+fieldset, lengend, button, input, textarea{border:none;}
+fieldset:focus, lengend:focus, button:focus, input:focus, textarea:focus{border:none;}
+a:focus { -moz-outline-style: none; } /* IE不支持 */
+
+a:focus { outline: none; } /*很多网站都会加的属性*/
+/* 设置默认字体 */
+body, button, input, select, textarea { /* for ie */
+	/*font: 12px/1 Tahoma, Helvetica, Arial, "宋体"Arial, sans-serif;*/
+    font: 12px/1 Tahoma, Helvetica, '微软雅黑', "\5b8b\4f53", sans-serif; /* 用 ascii 字符表示，使得在任何编码下都无问题 */
+
+}
+address, cite, dfn, em, var {
+	font-style: normal;
+} /* 将斜体扶正 */
+code, kbd, pre, samp, tt {
+	font-family: "Courier New", Courier, monospace;
+} /* 统一等宽字体 */
+small {
+	font-size: 12px;
+} /* 小于 12px 的中文很难阅读，让 small 正常化 */
+/* 重置列表元素 */
+ul, ol {
+	list-style: none;
+}
+/* 重置文本格式元素 */
+a {
+	text-decoration: none;
+}
+abbr[title], acronym[title] { /* 注：1.ie6 不支持 abbr; 2.这里用了属性选择符，ie6 下无效果 */
+	border-bottom: 1px dotted;
+	cursor: help;
+}
+q:before, q:after {
+	content: '';
+}
+/* 重置表单元素 */
+legend {
+	color: #000;
+} /* for ie6 */
+fieldset, img {
+	border: none;
+} /* img 搭车：让链接里的 img 无边框 */
+/* 注：optgroup 无法扶正 */
+button, input, select, textarea {
+	font-size: 100%; /* 使得表单元素在 ie 下能继承字体大小 */
+}
+/* 重置表格元素 */
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+table td
+{
+    empty-cells : show;
+}
+/* 重置 hr */
+hr {
+	border: none;
+	height: 1px;
+}
+/* 让非ie浏览器默认也显示垂直滚动条，防止因滚动条引起的闪烁 */
+/*html {
+	overflow-y: scroll;
+}*/
+/*清除float*/
+/* Clear Fix */
+.clearfix:after {
+	content:".";
+	display:block;
+	height:0;
+	clear:both;
+	visibility:hidden;
+}
+.clearfix {
+	display:inline-block;
+}
+/* Hide from IE Mac \*/
+.clearfix {
+	display:block;
+}
+.clearfix{ zoom:1;}
+/* End hide from IE Mac */
+/* end of clearfix */
+/*清除float_end*/
+/*init_end*/
+
+
+
+/*  公告样式    */
+body
+    {
+        line-height:26px;
+        color:#333;
+        font-family:"微软雅黑";
+        font-size:12px;
+        overflow-x:hidden;}
+.block{
+        display:block;}
+        .d-n{
+          display: none;
+        }
+.margin
+    {
+        margin:0 auto;}
+.left
+    {
+		display:inline;
+        float:left;}
+.right
+    {
+		display:inline;
+        float:right;}
+.w1002
+    {
+        width:1002px;
+        margin:0 auto;}
+/*宽*/
+.w100{width:100%;}
+.wh100{width:100%;height:100%;}      
+/*定位*/
+.position_fi{position:fixed;}
+.position_re{position:relative;}
+.position_ab{position:absolute;}
+.pos_lt{left:0;top:0;}
+.pos_lt_czjz{left:50%;top:50%;}
+.pos_lb{left:0;bottom:0;}
+.pos_l{left:0;}
+/*字体*/
+.f_12{font-size:12px;}
+.f_14{font-size:14px;}
+.f_16{font-size:16px;}
+.f_18{font-size:18px;}
+.f_20{font-size:20px;}
+.f_22{font-size:22px;}
+.f_24{font-size:24px;}
+.f_26{font-size:26px;}
+.f_28{font-size:28px;}
+.f_30{font-size:30px;}
+.f_32{font-size:32px;}
+.f_36{font-size:36px;}
+/*文字水平居中*/
+.f_ctr{text-align:center;}
+/*加粗*/
+.f_wgt{font-weight: bold;}
+.f_wgt_no{font-weight:normal;}
+
+
+
+
